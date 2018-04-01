@@ -1,0 +1,10 @@
+hardsmartpi:
+  pinRelay: 23
+  pinDht: 24
+  pinPower: 17
+  pinLedHigh: 27
+  pinLedLow: 22
+
+undertow:
+  httpListeners:
+    - port: 9988

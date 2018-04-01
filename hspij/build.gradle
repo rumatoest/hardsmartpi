@@ -1,0 +1,41 @@
+plugins {
+    id "java"
+    id "application"
+    id "io.spring.dependency-management" version "1.0.4.RELEASE"
+}
+
+mainClassName = "hspi.Application"
+
+repositories {
+    jcenter()
+    mavenCentral()
+    maven {
+        url "https://oss.sonatype.org/content/groups/public"
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'io.bootique.bom:bootique-bom:0.25'
+    }
+}
+
+dependencies {
+    compile "io.bootique:bootique"
+    compile "io.bootique.logback:bootique-logback"
+    compile "io.bootique.undertow:bootique-undertow"
+
+    compile group: 'com.pi4j', name: 'pi4j-core', version: '1.2-SNAPSHOT'
+}
+
+
+task copyDependencies(type: Copy) {
+    destinationDir libsDir
+    from configurations.runtime
+}
+
+
+jar {
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    manifest { attributes 'Main-Class': mainClassName }
+}
