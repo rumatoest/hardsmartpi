@@ -1,4 +1,4 @@
-package hspi;
+package hspi.app;
 
 import com.pi4j.io.gpio.PinProvider;
 import com.pi4j.io.gpio.RaspiBcmPin;
@@ -6,7 +6,7 @@ import io.bootique.annotation.BQConfig;
 import io.bootique.annotation.BQConfigProperty;
 
 @BQConfig
-public class HspiConfiguration {
+public class Configuration {
 
     private int pinRelay;
 
@@ -17,6 +17,26 @@ public class HspiConfiguration {
     private int pinLedHigh;
 
     private int pinPower;
+
+    private int humidOk = 60;
+
+    private int humidHigh = 80;
+
+    public int getHumidOk() {
+        return humidOk;
+    }
+
+    public void setHumidOk(int humidOk) {
+        this.humidOk = humidOk;
+    }
+
+    public int getHumidHigh() {
+        return humidHigh;
+    }
+
+    public void setHumidHigh(int humidHigh) {
+        this.humidHigh = humidHigh;
+    }
 
     public int getPinRelay() {
         return pinRelay;
@@ -69,12 +89,14 @@ public class HspiConfiguration {
 
     @Override
     public String toString() {
-        return "HspiConfiguration{" +
+        return "Configuration{" +
             "pinRelay=" + pinRelay +
             ", pinDht=" + pinDht +
             ", pinLedLow=" + pinLedLow +
             ", pinLedHigh=" + pinLedHigh +
             ", pinPower=" + pinPower +
+            ", humidOk=" + humidOk +
+            ", humidHight=" + humidHigh +
             '}';
     }
 }

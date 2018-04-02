@@ -1,4 +1,4 @@
-package hspi;
+package hspi.app;
 
 import io.bootique.Bootique;
 

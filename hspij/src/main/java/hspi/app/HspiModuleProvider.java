@@ -1,14 +1,12 @@
-package hspi;
+package hspi.app;
 
 import com.google.inject.Module;
 import io.bootique.BQModuleProvider;
 import io.bootique.undertow.UndertowModule;
 import io.bootique.undertow.UndertowModuleProvider;
 
-import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
 
 public class HspiModuleProvider implements BQModuleProvider {
 

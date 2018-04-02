@@ -7,4 +7,5 @@ hardsmartpi:
 
 undertow:
   httpListeners:
-    - port: 9988
+    - port: 8899
+      host: "0.0.0.0"

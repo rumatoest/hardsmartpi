@@ -1,10 +1,10 @@
-package hspi;
+package hspi.app;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import io.bootique.BQModule;
+import hspi.UndertowHandlerProvider;
 
 import io.bootique.config.ConfigurationFactory;
 import io.bootique.undertow.handlers.RootHandler;
@@ -14,13 +14,13 @@ public class HspiModule implements Module {
 
     @Override
     public void configure(Binder binder) {
-        binder.bind(HttpHandler.class).annotatedWith(RootHandler.class).toProvider(HspiUwHandlerProvider.class);
+        binder.bind(HttpHandler.class).annotatedWith(RootHandler.class).toProvider(UndertowHandlerProvider.class);
 
     }
 
     @Provides
     @Singleton
-    public HspiConfiguration configuration(ConfigurationFactory cf) {
-        return cf.config(HspiConfiguration.class, "hardsmartpi");
+    public Configuration configuration(ConfigurationFactory cf) {
+        return cf.config(Configuration.class, "hardsmartpi");
     }
 }
