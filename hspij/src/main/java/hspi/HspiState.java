@@ -6,9 +6,9 @@ public class HspiState {
 
     private int humidity;
 
-    private boolean humidifierPowered;
+    private volatile boolean humidifierPowered;
 
-    private int humidifierLevel;
+    private volatile int humidifierLevel;
 
     private boolean fanPowered;
 
@@ -32,7 +32,7 @@ public class HspiState {
         return humidifierPowered;
     }
 
-    public void setHumidifierPowered(boolean humidifierPowered) {
+    public synchronized void setHumidifierPowered(boolean humidifierPowered) {
         this.humidifierPowered = humidifierPowered;
     }
 
@@ -40,7 +40,7 @@ public class HspiState {
         return humidifierLevel;
     }
 
-    public void setHumidifierLevel(int humidifierLevel) {
+    public synchronized void setHumidifierLevel(int humidifierLevel) {
         this.humidifierLevel = humidifierLevel;
     }
 

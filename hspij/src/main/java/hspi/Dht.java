@@ -1,33 +1,36 @@
 package hspi;
 
-import com.pi4j.io.gpio.GpioController;
-import com.pi4j.io.gpio.GpioPin;
-import com.pi4j.io.gpio.Pin;
-import com.pi4j.io.gpio.PinMode;
+import com.pi4j.io.gpio.*;
 import com.pi4j.wiringpi.Gpio;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOError;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
 
 public class Dht {
+
+    private static final Logger logger = LoggerFactory.getLogger(Dht.class);
 
     private final int dhtPin;
 
     public Dht(int dhtPin) {
+        //Gpio.wiringPiSetupGpio();
         this.dhtPin = dhtPin;
     }
 
     public Value read() throws IOException {
         int[] data = {0, 0, 0, 0, 0};
         int[] cycles = new int[83];
-        Instant readLimit = Instant.now().plusMillis(10);
 
         Gpio.pinMode(dhtPin, Gpio.OUTPUT);
         Gpio.digitalWrite(dhtPin, Gpio.HIGH);
-        Gpio.delay(250);
+        Gpio.delay(500);
 
         System.gc();
+        Instant readStart = Instant.now();
         Gpio.digitalWrite(dhtPin, Gpio.LOW);
         Gpio.delay(18);
         Gpio.pinMode(dhtPin, Gpio.INPUT);
@@ -40,10 +43,11 @@ public class Dht {
                 // Instead of reading time we just count number of cycles until next level value
                 cycles[x] += 1;
             } else {
-                x++;
+                x += 1;
             }
 
-            if (z++ % 7000 == 0 && Instant.now().isAfter(readLimit)) {
+            if (z++ % 7000 == 0 && Instant.now().isAfter(readStart.plusMillis(30))) {
+                //logger.warn("Timout x={} z={} v={}  {}", x, z, v, cycles);
                 throw new IOException("Reading time exceeded 10ms");
             }
         }
@@ -72,6 +76,11 @@ public class Dht {
     }
 
     public static class Value {
+
+        @Override
+        public String toString() {
+            return "Value{" + Arrays.toString(value) + '}';
+        }
 
         private final int[] value;
 

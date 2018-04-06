@@ -1,7 +1,17 @@
 package hspi;
 
 import com.google.inject.Inject;
-import com.pi4j.io.gpio.*;
+import com.pi4j.io.gpio.GpioController;
+import com.pi4j.io.gpio.GpioFactory;
+import com.pi4j.io.gpio.GpioPinDigitalInput;
+import com.pi4j.io.gpio.GpioPinDigitalOutput;
+import com.pi4j.io.gpio.PinState;
+import com.pi4j.io.gpio.PinMode;
+import com.pi4j.io.gpio.RaspiPin;
+import com.pi4j.io.gpio.RaspiPinNumberingScheme;
+import com.pi4j.io.gpio.RaspiGpioProvider;
+import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
+import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 import hspi.app.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +50,12 @@ public class HspiService {
     @Inject
     public HspiService(Configuration config) {
         this.config = config;
+
         this.dht11 = new Dht(config.getPinDht());
+//        this.dht11 = new Dht(
+//            GPIO.provisionDigitalMultipurposePin(RaspiPin.getPinByAddress(config.getPinDht()), PinMode.DIGITAL_INPUT)
+//        );
+//        GPIO.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.getPinDht())).i
         this.provisionPins();
         exService.submit(this::loop);
 
@@ -52,6 +67,9 @@ public class HspiService {
         gpioLedL = GPIO.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.getPinLedLow()));
         gpioHPower = GPIO.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.getPinPower()));
         gpioRelay = GPIO.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.getPinRelay()));
+
+        // Add GPIO Listeners
+//        gpioLedL.addListener(getLedPowerLowListener());
     }
 
     public HspiState getState() {
@@ -88,8 +106,22 @@ public class HspiService {
         this.state.setFanPowered(gpioRelay.isHigh());
     }
 
-    void updateDht() {
-        int retry = 4;
+    private GpioPinListenerDigital getLedPowerLowListener() {
+        return new GpioPinListenerDigital() {
+
+            @Override
+            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
+                logger.info("EVENT LED power low pin state is {} edge {}", event.getState(), event.getEdge());
+                if (event.getState() == PinState.LOW) {
+                    state.setHumidifierPowered(false);
+                    state.setHumidifierLevel(0);
+                }
+            }
+        };
+    }
+
+    void updateDht() throws InterruptedException {
+        int retry = 5;
         while (retry > 0) {
             try {
                 Dht.Value dval = this.dht11.read();
@@ -98,8 +130,10 @@ public class HspiService {
                 this.state.setTemperature(dval.getTemperature());
                 retry = -1;
             } catch (IOException ex) {
-                if (++retry == 0) {
-                    logger.error(ex.getMessage(), ex);
+                if (--retry == 0) {
+                    logger.error("DHT READ FAILED {} ", ex.getMessage());
+                } else {
+                    Thread.sleep(750);
                 }
             }
         }
