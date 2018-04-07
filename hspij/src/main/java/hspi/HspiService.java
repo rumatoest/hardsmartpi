@@ -1,35 +1,31 @@
 package hspi;
 
+import hspi.app.Configuration;
+
 import com.google.inject.Inject;
 import com.pi4j.io.gpio.GpioController;
 import com.pi4j.io.gpio.GpioFactory;
 import com.pi4j.io.gpio.GpioPinDigitalInput;
 import com.pi4j.io.gpio.GpioPinDigitalOutput;
 import com.pi4j.io.gpio.PinState;
-import com.pi4j.io.gpio.PinMode;
 import com.pi4j.io.gpio.RaspiPin;
 import com.pi4j.io.gpio.RaspiPinNumberingScheme;
 import com.pi4j.io.gpio.RaspiGpioProvider;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
-import hspi.app.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class HspiService {
 
     private static final Logger logger = LoggerFactory.getLogger(HspiService.class);
 
-    private static final GpioController GPIO;
-
-    static {
-        GpioFactory.setDefaultProvider(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING));
-        GPIO = GpioFactory.getInstance();
-    }
+    private GpioController gpio;
 
     private final ExecutorService exService = Executors.newSingleThreadExecutor();
 
@@ -51,33 +47,47 @@ public class HspiService {
     public HspiService(Configuration config) {
         this.config = config;
 
-        this.dht11 = new Dht(config.getPinDht());
-//        this.dht11 = new Dht(
-//            GPIO.provisionDigitalMultipurposePin(RaspiPin.getPinByAddress(config.getPinDht()), PinMode.DIGITAL_INPUT)
-//        );
-//        GPIO.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.getPinDht())).i
-        this.provisionPins();
-        exService.submit(this::loop);
+        if (config.isDevMode()) {
+            exService.submit(this::loopDev);
+        } else {
+            GpioFactory.setDefaultProvider(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING));
+            this.gpio = GpioFactory.getInstance();
+
+            this.dht11 = new Dht(config.getPinDht());
+            this.provisionPins();
+            exService.submit(this::loop);
+        }
 
         logger.info("{}", config);
     }
 
     private final void provisionPins() {
-        gpioLedH = GPIO.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.getPinLedHigh()));
-        gpioLedL = GPIO.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.getPinLedLow()));
-        gpioHPower = GPIO.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.getPinPower()));
-        gpioRelay = GPIO.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.getPinRelay()));
+        gpioLedH = gpio.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.getPinLedHigh()));
+        gpioLedL = gpio.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.getPinLedLow()));
+        gpioHPower = gpio.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.getPinPower()));
+        gpioRelay = gpio.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.getPinRelay()));
 
-        // Add GPIO Listeners
-//        gpioLedL.addListener(getLedPowerLowListener());
+        // Add gpio Listeners
+        gpioLedL.addListener(getLedPowerLowListener());
     }
 
     public HspiState getState() {
         return state;
     }
 
-    public String readPowers() {
-        return "Low " + gpioLedL.getState() + "    High " + gpioLedH.getState();
+    private void loopDev() {
+        while (true) {
+            try {
+                state.setTemperature(20 + ThreadLocalRandom.current().nextInt(10));
+                state.setHumidity(35 + ThreadLocalRandom.current().nextInt(30));
+                state.setHumidifierLevel(ThreadLocalRandom.current().nextInt(0, 3));
+                state.setHumidifierPowered(state.getHumidifierLevel() > 0);
+                state.setFanPowered(ThreadLocalRandom.current().nextBoolean());
+                Thread.sleep(10000);
+            } catch (Exception ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+        }
     }
 
     private void loop() {
@@ -202,5 +212,19 @@ public class HspiService {
         } finally {
             gpioHPower.setState(false);
         }
+    }
+
+    public int getHumidityOk() {
+        return config.getHumidOk();
+    }
+
+    public int getHumidityHigh() {
+        return config.getHumidHigh();
+    }
+
+    public void updateHumidityLimits(int ok, int high) {
+        config.setHumidOk(ok);
+        config.setHumidHigh(high);
+        logger.info("Humidity levels ok:{} high:{}", ok, high);
     }
 }

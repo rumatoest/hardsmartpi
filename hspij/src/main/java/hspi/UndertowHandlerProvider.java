@@ -18,7 +18,10 @@ public class UndertowHandlerProvider implements Provider<HttpHandler> {
     public HttpHandler get() {
         return new RoutingHandler()
             .get("/", handler::root)
-            .get("/state", handler::state);
+            .get("/state", handler::state)
+            .get("/limits", handler::limits)
+            .post("/limits", handler::limitsUpdate);
+
     }
 
 }

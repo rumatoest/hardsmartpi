@@ -1,7 +1,5 @@
 package hspi.app;
 
-import com.pi4j.io.gpio.PinProvider;
-import com.pi4j.io.gpio.RaspiBcmPin;
 import io.bootique.annotation.BQConfig;
 import io.bootique.annotation.BQConfigProperty;
 
@@ -21,6 +19,16 @@ public class Configuration {
     private int humidOk = 60;
 
     private int humidHigh = 80;
+
+    private boolean devMode;
+
+    public boolean isDevMode() {
+        return devMode;
+    }
+
+    public void setDevMode(boolean devMode) {
+        this.devMode = devMode;
+    }
 
     public int getHumidOk() {
         return humidOk;
