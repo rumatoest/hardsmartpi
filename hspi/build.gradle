@@ -1,36 +1,49 @@
 buildscript {
-    ext.kotlin_version = '1.2.31'
+    ext.kotlin_version = '1.2.40'
 }
 
 plugins {
     id "application"
-    id "io.spring.dependency-management" version "1.0.4.RELEASE"
-    id "org.jetbrains.kotlin.jvm" version "1.2.31"
+    id "org.jetbrains.kotlin.jvm" version "1.2.40"
 }
 
+kotlin {
+    experimental {
+        coroutines 'enable'
+    }
+}
+
+//kotlin { // type is KotlinJvmProjectExtension
+//    experimental.coroutines = "enable"
+//}
+
 //application {
-    mainClassName = "hspi.AppKt"
+mainClassName = "hspi.AppKt"
 //}
 
 repositories {
     jcenter()
     mavenCentral()
-}
-
-dependencyManagement {
-    imports {
-        mavenBom 'io.bootique.bom:bootique-bom:0.25'
+    maven {
+        url "https://oss.sonatype.org/content/groups/public"
     }
 }
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "io.bootique.kotlin:bootique-kotlin"
-    compile "io.bootique.kotlin:bootique-kotlin-config"
-    compile "io.bootique.kotlin:bootique-kotlin-logback"
-    compile "io.bootique.kotlin:bootique-kotlin-undertow:0.25"
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5'
 
-    compile group: 'com.pi4j', name: 'pi4j-core', version: '1.1'
+    compile group: 'com.xenomachina', name: 'kotlin-argparser', version: '2.0.6'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.5'
+    compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: '2.9.5'
+    compile group: 'io.undertow', name: 'undertow-core', version: '2.0.4.Final'
+
+    compile group: 'com.pi4j', name: 'pi4j-core', version: '1.2-SNAPSHOT'
+
+    // LOGGING
+    compile group: 'io.github.microutils', name: 'kotlin-logging', version: '1.5.4'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.25'
 }
 
 compileKotlin {
