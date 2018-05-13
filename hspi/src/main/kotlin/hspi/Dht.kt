@@ -1,24 +1,30 @@
 package hspi
 
 import com.pi4j.wiringpi.Gpio
+import kotlinx.coroutines.experimental.delay
 import mu.KotlinLogging
 import java.io.IOException
 import java.time.Instant
 
+/**
+ * DHT11 sensor access class
+ */
 class Dht(val dhtPin: Int) {
 
-    fun read(): DhtValue {
+    suspend fun read(): DhtValue {
         var data = intArrayOf(0, 0, 0, 0, 0)
         var cycles = IntArray(83)
 
         Gpio.pinMode(dhtPin, Gpio.OUTPUT)
         Gpio.digitalWrite(dhtPin, Gpio.HIGH)
-        Gpio.delay(500)
+//        Gpio.delay(500)
+        delay(500)
 
         System.gc()
         val readStart = Instant.now()
         Gpio.digitalWrite(dhtPin, Gpio.LOW)
-        Gpio.delay(18)
+//        Gpio.delay(18)
+        delay(18)
         Gpio.pinMode(dhtPin, Gpio.INPUT)
 
         var x = 0

@@ -1,27 +1,34 @@
 package hspi
 
 import com.pi4j.io.gpio.*
-import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent
 import com.pi4j.io.gpio.event.GpioPinListenerDigital
-import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.launch
 import mu.KotlinLogging
+import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
 
+/**
+ * This service provide all logick to our system
+ */
 class Service(val config: AppConfig) {
     val logger = KotlinLogging.logger {}
 
+    var bot: TelegramBot
     val server: Server
     var state: State
     val dht: Dht
-    val gpio: GpioController
-    val gpioLedLow: GpioPinDigitalInput
-    val gpioLedHight: GpioPinDigitalInput
-    val gpioPowerButton: GpioPinDigitalOutput
-    val gpioRelay: GpioPinDigitalOutput
+    val gpio: GpioController?
+    val gpioLedLow: GpioPinDigitalInput?
+    val gpioLedHight: GpioPinDigitalInput?
+    val gpioPowerButton: GpioPinDigitalOutput?
+    val gpioRelay: GpioPinDigitalOutput?
+
+    @Volatile
+    private var noUpdatesUntil = Instant.now().minusSeconds(10)
 
     init {
+        bot = TelegramBot(this)
         state = State().apply {
             humidity = config.humidityLow + 1
             isFanPowered = false
@@ -30,36 +37,42 @@ class Service(val config: AppConfig) {
         dht = Dht(config.pinDht)
         server = Server(config.serverPort, this);
 
-        GpioFactory.setDefaultProvider(RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING));
-        gpio = GpioFactory.getInstance();
-        gpioLedHight = gpio.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.pinLedHigh))
-        gpioLedLow = gpio.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.pinLedLow))
-        gpioPowerButton = gpio.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.pinPower))
-        gpioRelay = gpio.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.pinRelay))
+        if (!config.noPi) {
+            GpioFactory.setDefaultProvider(RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING));
+            gpio = GpioFactory.getInstance();
+            gpioLedHight = gpio.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.pinLedHigh))
+            gpioLedLow = gpio.provisionDigitalInputPin(RaspiPin.getPinByAddress(config.pinLedLow))
+            gpioPowerButton = gpio.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.pinPower))
+            gpioRelay = gpio.provisionDigitalOutputPin(RaspiPin.getPinByAddress(config.pinRelay))
 
-        // Add gpio Listeners
-        gpioLedLow.addListener(GpioPinListenerDigital { event ->
-            logger.info { "EVENT LED power low pin state is ${event.state} edge ${event.edge}" }
-            if (event.state == PinState.LOW) {
-                state.isHumidifierPowered = false
-                state.humidifierLevel = 0
-            }
-        })
+            // Add gpio Listeners
+            gpioLedLow.addListener(GpioPinListenerDigital { event ->
+                logger.info { "EVENT LED power low pin state is ${event.state} edge ${event.edge}" }
+                if (event.state == PinState.LOW) {
+                    state.isHumidifierPowered = false
+                    state.humidifierLevel = 0
+                }
+            })
+        } else {
+            gpio = null
+            gpioLedHight = null
+            gpioLedLow = null
+            gpioPowerButton = null
+            gpioRelay = null
+        }
     }
 
     fun run() {
         launch {
-            if (config.noPi) {
-                loopStub()
-            } else {
-                loop()
-            }
+            loop()
         }
         server.start();
     }
 
+    /**
+     * DEBUG loop to run without RaspberryPi
+     */
     suspend fun loopStub() {
-        logger.debug { "Stub loop started" }
         while (true) {
             try {
                 state.temperature = 20 + ThreadLocalRandom.current().nextInt(10)
@@ -82,6 +95,14 @@ class Service(val config: AppConfig) {
     }
 
     suspend fun loop() {
+        if (config.noPi) {
+            loopStub()
+            logger.debug { "Stub loop started" }
+            return;
+        }
+
+        // DHT update takes unpredicted amount of time
+        // I do not want to mix it with other logic
         launch {
             while (true) {
                 var error = false
@@ -102,29 +123,57 @@ class Service(val config: AppConfig) {
         }
 
         while (true) {
-            if (state.humidity < config.humidityLow) {
-                this.relayOff()
-                this.humidifierOnHigh()
-            } else if (state.humidity < config.humidityHigh) {
-                this.relayOff()
-                this.humidifierOnLow()
+            // Here we read current system state
+            this.state.isHumidifierPowered = gpioLedLow!!.isHigh()
+            if (this.state.isHumidifierPowered) {
+                this.state.humidifierLevel = if (gpioLedHight!!.isHigh()) 2 else 1
             } else {
-                this.relayOn()
-                this.humidifierOff()
+                this.state.humidifierLevel = 0
+            }
+            state.isFanPowered = gpioRelay!!.isHigh
+
+            logger.info("UPDATED: ${this.state}")
+
+            val skipUpdate = synchronized(this) {
+                Instant.now().isBefore(noUpdatesUntil)
+            }
+
+            if (skipUpdate) {
+                logger.info { "System updates locked until ${noUpdatesUntil}" }
+            } else {
+                // Now we can decide what should we do with humidifier and fan
+                if (state.humidity < config.humidityLow) {
+                    this.relayOff()
+                    this.humidifierOnHigh()
+                } else if (state.humidity < config.humidityHigh) {
+                    this.relayOff()
+                    this.humidifierOnLow()
+                } else {
+                    this.relayOn()
+                    this.humidifierOff()
+                }
             }
             delay(2000)
         }
     }
 
-    private fun relayOn() {
-        gpioRelay.setState(true)
+    val votes: BotVotes
+        get() = bot.votes
+
+    @Synchronized
+    fun delayUpdates(until: Instant) {
+        noUpdatesUntil = until;
     }
 
-    private fun relayOff() {
-        gpioRelay.setState(false)
+    fun relayOn() {
+        gpioRelay?.setState(true)
     }
 
-    private suspend fun humidifierOnHigh() {
+    fun relayOff() {
+        gpioRelay?.setState(false)
+    }
+
+    suspend fun humidifierOnHigh() {
         if (state.humidifierLevel === 0) {
             humidifierPress(2)
         }
@@ -142,7 +191,7 @@ class Service(val config: AppConfig) {
         }
     }
 
-    private suspend fun humidifierOff() {
+    suspend fun humidifierOff() {
         if (state.humidifierLevel === 1) {
             humidifierPress(2)
         }
@@ -152,19 +201,19 @@ class Service(val config: AppConfig) {
     }
 
     private suspend fun humidifierPress(times: Int) {
-        gpioPowerButton.setState(false)
+        gpioPowerButton?.setState(false)
         try {
             for (i in 0 until times) {
-                gpioPowerButton.setState(true)
+                gpioPowerButton?.setState(true)
                 delay(250)
-                gpioPowerButton.setState(false)
+                gpioPowerButton?.setState(false)
                 logger.info("Humidifier POWER pressed")
                 Thread.sleep(50)
             }
         } catch (ex: Exception) {
             logger.error(ex) { ex.message }
         } finally {
-            gpioPowerButton.setState(false)
+            gpioPowerButton?.setState(false)
         }
     }
 

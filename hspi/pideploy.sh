@@ -8,4 +8,4 @@ fi
 
 ./gradlew jar
 echo "Copy build to $RPI_IP via scp"
-sshpass -v -p raspberry  scp ./build/libs/hardsmartpi.jar  "pi@${RPI_IP}:~"
+sshpass -v -p raspberry  scp ./build/libs/hspik.jar  "pi@${RPI_IP}:~/hspi.jar"

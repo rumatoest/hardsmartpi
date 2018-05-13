@@ -13,13 +13,7 @@ kotlin {
     }
 }
 
-//kotlin { // type is KotlinJvmProjectExtension
-//    experimental.coroutines = "enable"
-//}
-
-//application {
-mainClassName = "hspi.AppKt"
-//}
+mainClassName = "hspi.App"
 
 repositories {
     jcenter()

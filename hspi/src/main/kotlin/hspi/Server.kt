@@ -2,15 +2,19 @@ package hspi
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.undertow.Handlers
 import io.undertow.Undertow
+import io.undertow.io.Sender
 import io.undertow.server.HttpServerExchange
-import io.undertow.server.RoutingHandler
 import io.undertow.util.Headers
 import io.undertow.util.Methods
 
+/**
+ * Web API frontend to {@see hspi.Service}
+ */
 class Server(
-        port: Int,
-        val service: Service
+    port: Int,
+    val service: Service
 ) {
 
     val server: Undertow;
@@ -21,35 +25,46 @@ class Server(
 
     init {
         server = Undertow.builder()
-                .addHttpListener(port, "0.0.0.0")
-                .setHandler(handler())
-                .build();
+            .addHttpListener(port, "0.0.0.0")
+            .setHandler(handler())
+            .build();
     }
 
-    private fun handler() = RoutingHandler()
-            .get("/", this::root)
-            .get("/state", this::state)
-//            .get("humidity/hight", this::humidityHigh)
-            .post("humidity/hight", this::humidityHigh)
-//            .get("humidity/low", this::humidityLow)
-            .post("humidity/low", this::humidityLow)
+    private fun handler() = Handlers.path()
+        .addExactPath("/", this::root)
+        .addExactPath("/state", this::state)
+        .addExactPath("/humidity/high", this::humidityHigh)
+        .addExactPath("/humidity/low", this::humidityLow)
+        .addExactPath("/votes/h", this::votesH)
+        .addExactPath("/votes/f", this::votesF)
 
+    fun sendText(exchange: HttpServerExchange): Sender {
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "sendText/plain")
+        return exchange.responseSender
+    }
 
     fun start() {
         server.start();
     }
 
     fun root(exchange: HttpServerExchange) {
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
-        exchange.getResponseSender().send("SmartPi server is running");
+        sendText(exchange).send("SmartPi server is running");
     }
 
     fun state(exchange: HttpServerExchange) {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "applictaion/json")
         exchange.getResponseSender()
-                .send(
-                        mapper.writeValueAsString(service.state)
-                )
+            .send(
+                mapper.writeValueAsString(service.state)
+            )
+    }
+
+    fun votesH(exchange: HttpServerExchange) {
+        sendText(exchange).send("${service.votes.humidifier}")
+    }
+
+    fun votesF(exchange: HttpServerExchange) {
+        sendText(exchange).send("${service.votes.fan}")
     }
 
     fun humidityHigh(exchange: HttpServerExchange) {
@@ -60,8 +75,7 @@ class Server(
                 }
             }
         }
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "plain/text")
-        exchange.getResponseSender().send("${service.config.humidityHigh}")
+        sendText(exchange).send("${service.config.humidityHigh}")
     }
 
     fun humidityLow(exchange: HttpServerExchange) {
@@ -72,7 +86,6 @@ class Server(
                 }
             }
         }
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "plain/text")
-        exchange.getResponseSender().send("${service.config.humidityLow}")
+        sendText(exchange).send("${service.config.humidityLow}")
     }
 }

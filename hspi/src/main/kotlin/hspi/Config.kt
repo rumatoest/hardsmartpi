@@ -2,7 +2,9 @@ package hspi
 
 import java.beans.ConstructorProperties
 
-
+/**
+ * System configuration properties
+ */
 data class AppConfig
 @ConstructorProperties("noPi",
         "pinRelay",
