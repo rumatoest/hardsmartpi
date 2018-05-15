@@ -24,7 +24,9 @@ constructor(
         val pinPower: Int,
         var humidityLow: Int,
         var humidityHigh: Int,
-        val serverPort: Int
+        val serverPort: Int,
+        val botName: String,
+        val botToken: String
 ) {
     override fun toString(): String {
         return "AppConfig(noPi=$noPi, pinRelay=$pinRelay, pinDht=$pinDht, pinLedLow=$pinLedLow, pinLedHigh=$pinLedHigh, pinPower=$pinPower, humidityLow=$humidityLow, humidityHigh=$humidityHigh, serverPort=$serverPort)"

@@ -5,8 +5,11 @@ import com.pi4j.io.gpio.event.GpioPinListenerDigital
 import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.launch
 import mu.KotlinLogging
+import org.telegram.telegrambots.ApiContextInitializer
 import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
+import org.telegram.telegrambots.TelegramBotsApi
+
 
 /**
  * This service provide all logick to our system
@@ -15,6 +18,7 @@ class Service(val config: AppConfig) {
     val logger = KotlinLogging.logger {}
 
     var bot: TelegramBot
+    var telegramBotsApi: TelegramBotsApi? = null
     val server: Server
     var state: State
     val dht: Dht
@@ -28,7 +32,6 @@ class Service(val config: AppConfig) {
     private var noUpdatesUntil = Instant.now().minusSeconds(10)
 
     init {
-        bot = TelegramBot(this)
         state = State().apply {
             humidity = config.humidityLow + 1
             isFanPowered = false
@@ -59,6 +62,21 @@ class Service(val config: AppConfig) {
             gpioLedLow = null
             gpioPowerButton = null
             gpioRelay = null
+        }
+
+        // Now we start our bot if we can
+        ApiContextInitializer.init();
+        bot = TelegramBot(this)
+        if (bot.canStartBot()) {
+            telegramBotsApi = TelegramBotsApi()
+            try {
+                telegramBotsApi?.registerBot(bot)
+                launch {
+                    bot.loop()
+                }
+            } catch (e: Throwable) {
+                logger.error(e) { e.message }
+            }
         }
     }
 

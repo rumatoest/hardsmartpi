@@ -2,4 +2,4 @@
 cd "$(dirname "$0")"
 ./gradlew jar
 echo "Execute application with args: $@"
-java -jar ./build/libs/hardsmartpi.jar "$@"
+java -jar ./build/libs/hspik.jar "$@"

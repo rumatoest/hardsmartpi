@@ -7,5 +7,7 @@
   "humidity_low": 40,
   "humidity_high": 50,
   "server_port": 4242,
-  "no_pi": true
+  "no_pi": true,
+  "bot_name": "",
+  "bot_token": ""
 }
