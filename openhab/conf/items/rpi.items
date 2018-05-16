@@ -1,0 +1,4 @@
+Number pi_temperature { http="<[rpi:300:JSONPATH(temperature)]" }
+Number pi_humidity { http="<[rpi:300:JSONPATH(humidity)]" }
+Switch pi_fan { http="<[rpi:300:JSONPATH(fan_powered)]" }
+Switch pi_humidifier { http="<[rpi:300:JSONPATH(humidifier_powered)]" }

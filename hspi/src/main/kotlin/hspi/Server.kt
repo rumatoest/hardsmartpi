@@ -55,7 +55,7 @@ class Server(
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "applictaion/json")
         exchange.getResponseSender()
             .send(
-                mapper.writeValueAsString(service.state)
+                mapper.writeValueAsString(StateResponse(service.state))
             )
     }
 
@@ -88,4 +88,20 @@ class Server(
         }
         sendText(exchange).send("${service.config.humidityLow}")
     }
+}
+
+data class StateResponse(
+    val temperature: Int,
+    val humidity: Int,
+    val humidifierLevel: Int,
+    val humidifierPowered: String,
+    val fanPowered: String
+) {
+    constructor(state: State) : this(
+        state.temperature,
+        state.humidity,
+        state.humidifierLevel,
+        if (state.isHumidifierPowered) "ON" else "OFF",
+        if (state.isFanPowered) "ON" else "OFF"
+    )
 }

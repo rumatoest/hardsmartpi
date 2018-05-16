@@ -101,12 +101,17 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
         val fan = votesfOn.size - votesfOff.size
         val hum = voteshOn.size - voteshOff.size
 
+        periodStart = Instant.now()
+
         votesfOff.clear()
         votesfOn.clear()
         voteshOn.clear()
         voteshOff.clear()
 
-        periodStart = Instant.now()
+        if (fan == 0 && hum == 0) {
+            return;
+        }
+
         val lockIntill = Instant.now().plusSeconds(serviceLockSec);
         service.delayUpdates(lockIntill)
         if (fan > 0) {
