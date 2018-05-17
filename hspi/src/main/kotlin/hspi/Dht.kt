@@ -49,7 +49,7 @@ class Dht(val dhtPin: Int) {
             val lowCycle = cycles[2 * i + 3]
             val highCycle = cycles[2 * i + 4]
 
-            data[i / 8] = data[i / 8] shl 1
+            data[i / 8] = data[i / 8] shl 1 // Shift bytes left like "<< 1"
             if (highCycle > lowCycle) {
                 // High cycles are greater than 50us low cycle count, must be a 1.
                 data[i / 8] = data[i / 8] or 1

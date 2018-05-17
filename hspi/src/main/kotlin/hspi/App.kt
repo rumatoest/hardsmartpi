@@ -17,7 +17,6 @@ private val logger = KotlinLogging.logger {}
 //@JvmName("App")
 object App {
 
-
     @JvmStatic
     fun main(args: Array<String>) {
         loggerInit()
