@@ -19,21 +19,21 @@ object App {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        loggerInit()
+        initLogger()
         ArgParser(args).parseInto(::AppArgs).run {
 
             val mapper = jacksonObjectMapper().apply {
                 propertyNamingStrategy = PropertyNamingStrategy.SNAKE_CASE
             }
 
-            var pBase = loadProperties(mapper, "classpath:config.json")
+            var baseConfig = loadProperties(mapper, "classpath:config.json")
 
-            if (this.propPath.isNotEmpty()) {
-                val p = loadProperties(mapper, this.propPath)
-                pBase.setAll(p)
+            if (this.configPath.isNotEmpty()) {
+                val externalProperties = loadProperties(mapper, this.configPath)
+                baseConfig.setAll(externalProperties)
             }
 
-            var config = mapper.treeToValue(pBase, AppConfig::class.java);
+            var config = mapper.treeToValue(baseConfig, AppConfig::class.java);
 
             if (this.noPi) {
                 config.noPi = true;
@@ -43,11 +43,10 @@ object App {
 
             val service = Service(config)
             service.run()
-
         }
     }
 
-    private fun loggerInit() {
+    private fun initLogger() {
         PropertyConfigurator.configure(App.javaClass.classLoader.getResourceAsStream("log4j.properties"))
     };
 
@@ -66,7 +65,7 @@ object App {
 }
 
 class AppArgs(parser: ArgParser) {
-    val propPath by parser.storing("--config", help = "Properties path").default("")
+    val configPath by parser.storing("--config", help = "Properties path").default("")
 
     val noPi by parser.flagging("--nopi", help = "Dev mode to run app without RaspberryPi")
 }

@@ -1,6 +1,5 @@
 package hspi
 
-import kotlinx.coroutines.experimental.delay
 import mu.KotlinLogging
 
 import org.telegram.telegrambots.api.objects.Update
@@ -9,13 +8,19 @@ import org.telegram.telegrambots.exceptions.TelegramApiException
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.objects.Message
 
+import kotlinx.coroutines.experimental.delay
 import java.time.Instant
 
+/**
+ * Just to pass information about bot votes
+ */
+data class BotVotes(val humidifier: Int, val fan: Int)
 
 class TelegramBot(val service: Service) : TelegramLongPollingBot() {
 
     val logger = KotlinLogging.logger {}
 
+    // Telegram related code
     override fun getBotToken() = service.config.botToken
 
     override fun getBotUsername() = service.config.botName
@@ -44,14 +49,16 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
         }
     }
 
+    // End of Telegram related code
+
     fun canStartBot() = botToken.isNotBlank() && botUsername.isNotBlank()
 
-    val periodLengthSec = 45L
+    val voteDurationSec = 45L
 
-    val serviceLockSec = 30L
+    val lockServiceUpdateSec = 30L
 
     @Volatile
-    var periodStart: Instant = Instant.now()
+    var votePeriodStarted: Instant = Instant.now()
 
     var voteshOn: HashSet<String> = HashSet();
 
@@ -101,7 +108,7 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
         val fan = votesfOn.size - votesfOff.size
         val hum = voteshOn.size - voteshOff.size
 
-        periodStart = Instant.now()
+        votePeriodStarted = Instant.now()
 
         votesfOff.clear()
         votesfOn.clear()
@@ -112,7 +119,7 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
             return;
         }
 
-        val lockIntill = Instant.now().plusSeconds(serviceLockSec);
+        val lockIntill = Instant.now().plusSeconds(lockServiceUpdateSec);
         service.delayUpdates(lockIntill)
         if (fan > 0) {
             service.relayOn()
@@ -126,7 +133,7 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
             service.humidifierOff()
         }
 
-        logger.info { "Votes applied H is ${hum} F is ${fan} . No changes for ${serviceLockSec} sec." }
+        logger.info { "Votes applied H is ${hum} F is ${fan} . No changes for ${lockServiceUpdateSec} sec." }
     }
 
     fun statMessage() = "Humidity: ${service.state.humidity}% Temperature: ${service.state.temperature}C \n" +
@@ -136,19 +143,17 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
             " - fan: ${votesfOn.size - votesfOff.size}"
 
     fun secondsLeft(): Int {
-        val secs = periodStart.plusSeconds(periodLengthSec).epochSecond - Instant.now().epochSecond
+        val secs = votePeriodStarted.plusSeconds(voteDurationSec).epochSecond - Instant.now().epochSecond
         return if (secs > 0) secs.toInt() else 0
 
     }
 
     suspend fun loop() {
         while (true) {
-            if (Instant.now().isAfter(periodStart.plusSeconds(periodLengthSec))) {
+            if (Instant.now().isAfter(votePeriodStarted.plusSeconds(voteDurationSec))) {
                 applyVotes()
             }
             delay(1000)
         }
     }
 }
-
-data class BotVotes(val humidifier: Int, val fan: Int)

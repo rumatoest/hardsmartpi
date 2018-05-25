@@ -35,10 +35,10 @@ class Server(
         .addExactPath("/state", this::state)
         .addExactPath("/humidity/high", this::humidityHigh)
         .addExactPath("/humidity/low", this::humidityLow)
-        .addExactPath("/votes/h", this::votesH)
-        .addExactPath("/votes/f", this::votesF)
+        .addExactPath("/votes/h", this::votesHumidifier)
+        .addExactPath("/votes/f", this::votesFan)
 
-    fun sendText(exchange: HttpServerExchange): Sender {
+    private fun sendText(exchange: HttpServerExchange): Sender {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "sendText/plain")
         return exchange.responseSender
     }
@@ -59,11 +59,11 @@ class Server(
             )
     }
 
-    fun votesH(exchange: HttpServerExchange) {
+    fun votesHumidifier(exchange: HttpServerExchange) {
         sendText(exchange).send("${service.votes.humidifier}")
     }
 
-    fun votesF(exchange: HttpServerExchange) {
+    fun votesFan(exchange: HttpServerExchange) {
         sendText(exchange).send("${service.votes.fan}")
     }
 

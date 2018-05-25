@@ -2,17 +2,18 @@ package hspi
 
 import com.pi4j.io.gpio.*
 import com.pi4j.io.gpio.event.GpioPinListenerDigital
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
+
 import mu.KotlinLogging
 import org.telegram.telegrambots.ApiContextInitializer
-import java.time.Instant
-import java.util.concurrent.ThreadLocalRandom
 import org.telegram.telegrambots.TelegramBotsApi
 
+import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.launch
+import java.time.Instant
+import java.util.concurrent.ThreadLocalRandom
 
 /**
- * This service provide all logick to our system
+ * Here we have core logic for our system.
  */
 class Service(val config: AppConfig) {
     val logger = KotlinLogging.logger {}

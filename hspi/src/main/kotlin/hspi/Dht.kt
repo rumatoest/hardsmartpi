@@ -1,10 +1,36 @@
 package hspi
 
 import com.pi4j.wiringpi.Gpio
+
 import kotlinx.coroutines.experimental.delay
-import mu.KotlinLogging
 import java.io.IOException
 import java.time.Instant
+
+/**
+ * Hold raw bytes from DHT11 and have knowledge how to read it.
+ */
+data class DhtValue(val value: IntArray) {
+    val temperature: Int
+        get() {
+            var c = ((value[2] and 0x7F shl 8) + value[3]) / 10
+            if (c > 125) {
+                c = value[2] // for DHT11
+            }
+            if (value[2] and 0x80 != 0) {
+                c = -c
+            }
+            return c
+        }
+
+    val humidity: Int
+        get() {
+            var h = ((value[0] shl 8) + value[1]) / 10
+            if (h > 100) {
+                h = value[0] // for DHT11
+            }
+            return h
+        }
+}
 
 /**
  * DHT11 sensor access class
@@ -17,14 +43,12 @@ class Dht(val dhtPin: Int) {
 
         Gpio.pinMode(dhtPin, Gpio.OUTPUT)
         Gpio.digitalWrite(dhtPin, Gpio.HIGH)
-//        Gpio.delay(500)
-        delay(500)
+        delay(500) // can be also Gpio.delay(500)
 
         System.gc()
         val readStart = Instant.now()
         Gpio.digitalWrite(dhtPin, Gpio.LOW)
-//        Gpio.delay(18)
-        delay(18)
+        delay(18)  // can be also Gpio.delay(18)
         Gpio.pinMode(dhtPin, Gpio.INPUT)
 
         var x = 0
@@ -43,7 +67,6 @@ class Dht(val dhtPin: Int) {
                 throw IOException("Reading time exceeded 10ms")
             }
         }
-
 
         for (i in 0..39) {
             val lowCycle = cycles[2 * i + 3]
@@ -66,27 +89,4 @@ class Dht(val dhtPin: Int) {
 
         throw IOException("Can not validate DHT read checksum")
     }
-}
-
-data class DhtValue(val value: IntArray) {
-    val temperature: Int
-        get() {
-            var c = ((value[2] and 0x7F shl 8) + value[3]) / 10
-            if (c > 125) {
-                c = value[2] // for DHT11
-            }
-            if (value[2] and 0x80 != 0) {
-                c = -c
-            }
-            return c
-        }
-
-    val humidity: Int
-        get() {
-            var h = ((value[0] shl 8) + value[1]) / 10
-            if (h > 100) {
-                h = value[0] // for DHT11
-            }
-            return h
-        }
 }
