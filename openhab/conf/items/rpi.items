@@ -3,5 +3,5 @@ Number pi_humidity { http="<[rpi:300:JSONPATH(humidity)]" }
 Switch pi_fan { http="<[rpi:300:JSONPATH(fan_powered)]" }
 Switch pi_humidifier { http="<[rpi:300:JSONPATH(humidifier_powered)]" }
 
-Number pi_votes_h { http="<[rpivh:300:REGEX((\\d+))]" }
-Number pi_votes_f { http="<[rpivf:300:REGEX((\\d+))]" }
+Number pi_votes_h { http="<[rpivh:300:REGEX((-{0,1}\\d+))]" }
+Number pi_votes_f { http="<[rpivf:300:REGEX((-{0,1}\\d+))]" }

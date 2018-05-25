@@ -30,7 +30,7 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
         if (!message.isUserMessage || message.text.isEmpty() || message.from == null) {
             return;
         }
-        val reply = processCommand(message.from.id.toString(), message.text)
+        val reply = processCommand(message.from.id.toString(), message.text.trim().toLowerCase())
         if (reply.isNotBlank()) {
             sendMsg(message, reply)
         }
@@ -53,9 +53,9 @@ class TelegramBot(val service: Service) : TelegramLongPollingBot() {
 
     fun canStartBot() = botToken.isNotBlank() && botUsername.isNotBlank()
 
-    val voteDurationSec = 45L
+    val voteDurationSec = 15L
 
-    val lockServiceUpdateSec = 30L
+    val lockServiceUpdateSec = 10L
 
     @Volatile
     var votePeriodStarted: Instant = Instant.now()

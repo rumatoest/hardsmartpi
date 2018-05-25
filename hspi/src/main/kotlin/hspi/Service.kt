@@ -21,6 +21,7 @@ class Service(val config: AppConfig) {
     var bot: TelegramBot
     var telegramBotsApi: TelegramBotsApi? = null
     val server: Server
+    var stateOld: State
     var state: State
     val dht: Dht
     val gpio: GpioController?
@@ -38,6 +39,8 @@ class Service(val config: AppConfig) {
             isFanPowered = false
             isHumidifierPowered = false
         }
+        stateOld = state.copy()
+
         dht = Dht(config.pinDht)
         server = Server(config.serverPort, this);
 
@@ -151,7 +154,10 @@ class Service(val config: AppConfig) {
             }
             state.isFanPowered = gpioRelay!!.isHigh
 
-            logger.info("UPDATED: ${this.state}")
+            if (state != stateOld) {
+                logger.info("UPDATED: ${this.state}")
+                stateOld = state.copy()
+            }
 
             val skipUpdate = synchronized(this) {
                 Instant.now().isBefore(noUpdatesUntil)
